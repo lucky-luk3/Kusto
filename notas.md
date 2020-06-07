@@ -334,6 +334,31 @@ Para tener un resultado en una udidad de tiempo concreta, hay que dividir el res
 ```
 TimeSinceStartOfYear=( TimeGenerated - datetime(2018-01-01) ) / 1d  // Expresado en dias
 ```
+### Format date
+Esta función sirve para formatear una fecha en el formato deseado.  
+Se puede formatear tanto un datetime como un timespan.
+```
+Perf
+| take 100                       // done just to give us a small dataset to demo
+| project CounterName 
+        , CounterValue 
+        , TimeGenerated 
+        , format_datetime(TimeGenerated, "y-M-d") // 20-5-30 // format_timespan
+        , format_datetime(TimeGenerated, "yyyy-MM-dd")
+        , format_datetime(TimeGenerated, "MM/dd/yyyy")
+        , format_datetime(TimeGenerated, "MM/dd/yyyy hh:mm:ss tt") // 30/05/2020 03:49:58 AM
+        , format_datetime(TimeGenerated, "MM/dd/yyyy HH:mm:ss")
+        , format_datetime(TimeGenerated, "MM/dd/yyyy HH:mm:ss.ffff") // Con milisegundos
+        
+// Supported syntax - one letter is single number, two letters two numbers
+//    d - Day, 1 to 31
+//   dd - Day, 01 to 31
+//    M - Month, 1 to 12
+//   MM - Month, 01 to 12
+//    y - Year, 0 to 9999
+//   yy - Year, 00 to 9999
+// yyyy - Year, 0000 to 9999
+```
 ### startofday y endofday //week, month, year
 Esta función sirve para calcular el inicio o el fin del dia/semana... de una fecha dada.  
 ```
@@ -363,6 +388,36 @@ Perf
 | where CounterName == "% Free Space" 
 | where CounterValue !between ( 70.0 .. 100.0 )
 ```
+### Datetime part
+Esta función permite extraer una parte de un objeto datetime.
+```
+Perf
+| take 100
+| project CounterName 
+        , CounterValue 
+        , TimeGenerated 
+        , year = datetime_part("year", TimeGenerated)
+        , quarter = datetime_part("quarter", TimeGenerated)
+        , month = datetime_part("month", TimeGenerated)
+        , weekOfYear = datetime_part("weekOfYear", TimeGenerated)
+        , day = datetime_part("day", TimeGenerated)
+        , dayOfYear = datetime_part("dayOfYear", TimeGenerated)
+        , hour = datetime_part("hour", TimeGenerated)
+        , minute = datetime_part("minute", TimeGenerated)
+        , second = datetime_part("second", TimeGenerated)
+        , millisecond = datetime_part("millisecond", TimeGenerated)
+        , microsecond = datetime_part("microsecond", TimeGenerated)
+        , nanosecond = datetime_part("nanosecond", TimeGenerated)
+
+Event // Eventos agrupados por horas del dia
+| where TimeGenerated >= ago(7d)
+| extend HourOfDay = datetime_part("hour", TimeGenerated)
+| project HourOfDay 
+| summarize EventCount=count() 
+         by HourOfDay
+| sort by HourOfDay asc 
+
+```
 ### Todynamic
 Esta función permite convertir un campo que contenga un json en campos seleccionables y operables.
 ```
@@ -384,4 +439,81 @@ SecurityAlert
         , ResourceType = ExtProps.resourceType
         , ServiceId = ExtProps.ServiceId
 ```
-Para tealizar esta operación con json de varios niveles se debe usar la notación "ExtProps.Level1.Level2" 
+Para realizar esta operación con json de varios niveles se debe usar la notación "ExtProps.Level1.Level2" 
+
+### Iif
+Operador lógico "si", sirve para crear campos dinámicos teniendo en cuenta una condición.
+```
+Perf
+| where CounterName == "% Free Space"
+| extend FreeState = iif( CounterValue < 50
+                        , "You might want to look at this" // Si al condición se cumple
+                        , "You're OK!" // Si la condición no se cumple
+                        )
+| project Computer
+        , CounterName
+        , CounterValue 
+        , FreeState
+```
+### Case
+Operador lógico de un switch, se genera un campo dinámico pudiendo declarar varias opciones.
+```
+Perf
+| where CounterName == "% Free Space"
+| extend FreeLevel = case( CounterValue < 10, "Critical (Less than 10% free disk space)" // almacena el valor asignado si se cumple la condición
+                         , CounterValue < 30, "Danger (10% to 30% free disk space)"
+                         , CounterValue < 50, "Look at it (30% to 50% free disk space)"
+                         , "You're OK! (More than 50% free disk space)"
+                         )
+| summarize ComputerCount=count() 
+         by FreeLevel
+```
+### Isempty y Isnull
+La función isempty devolverá Verdadero si el campo asignado está vacio e Isnull si contine el valor Null.
+```
+Perf
+| where isempty( InstanceName )
+| count
+
+Perf
+| where isnull( SampleCount )
+| count
+```
+### Split
+Esta función divide un campo por el caracter/es asignados.
+```
+Perf
+| take 100                       // done just to give us a small dataset to demo
+| project Computer 
+        , CounterName 
+        , CounterValue 
+        , CounterPath  // Ejemplo: "\\AppBE00.NA.contosohotels.com\LogicalDisk(D:)\% Free Space	"
+        , CPSplit = split(CounterPath, "\\") // Salida: ["","","AppBE00.NA.contosohotels.com","LogicalDisk(D:)","% Free Space"]	
+```
+Se puede añadir un tercer parámetro a la función que será el indice del elemento de salida que queremos obtener.
+```
+Perf
+| take 100                       
+| extend myComputer = split(CounterPath, "\\", 2) // Salida: ["CH-UBNTVM"]	
+       , myObjectInstance = split(CounterPath, "\\", 3)
+       , myCounterName = split(CounterPath, "\\", 4)  
+| project Computer 
+        , ObjectName 
+        , CounterName 
+        , InstanceName 
+        , myComputer 
+        , myObjectInstance
+```
+Es más recomendable asignar la salida del split a una variable y obtener de ahí el indice deseado, la salida será un String no un array.
+```
+Perf
+| extend CounterPathArray = split(CounterPath, "\\") 
+| extend myComputer = CounterPathArray[2] // Salida: MABS20.NA.contosohotels.com	
+       , myObjectInstance = CounterPathArray[3]
+```
+### String Operators
+Operadores adiccionales a los explicados en el primer apartado:
+* `where CouenterName contains "BYTES"` No es sensitivo
+* `where CouenterName contains_cs "BYTES"` Es sensitivo
+* `where CouenterName !contains "BYTES"` Niega el contiene
+* `where CounterName in ("Disk Transfers/sec", "Disk Reads/sec", "Avg. Disk sec/Write") ` Pertenece a un grupo
