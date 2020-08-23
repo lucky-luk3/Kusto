@@ -15,10 +15,32 @@
     * [Print](#Print)
     * [Ago](#Ago)
     * [Sort by](#Sort-by)
+    * [Extract](#Extract)
+    * [Parse](#Parse)
+    * [Datetime / timespan](#Datetime-/-timespan)
+    * [Format date](#Format-date)
+    * [Start of time](#startofday-y-endofday-//week,-month,-year)
+    * [Between](#Between)
+    * [Datetime part](#Datetime-part)
+    * [Todynamic](#Todynamic)
+    * [Iif](#Iif)
+    * [Case](#Case)
+    * [Isempty e Isnull](#Isempty-e-Isnull)
+    * [Split](#Split)
+    * [String Operators](#String-Operators)
+* [Agregaciones](#Agregaciones)
+    * [Maseket() y makelist()](#Maseket()-y-makelist())
+    * [Mxexpand()](#Mxexpand())
+    * [Dcount()](#Dcount())
+    * [Pivot()](#Pivot())
+* [Datasets()](#Datasets)
+    * [Let](#Let)
+    * [Join](#Join)
+    * [Union](#Union)
 ## Operadores más usados
 ### Search
-El operador search realiza una búsqueda textual sobre todas los elementos que marquemos, si no lo marcamos, lo hará sobre toda la base de datos.
-Para buscar en todos los campos de una tabla, se puede colocar delante de una tuberia.
+El operador search realiza una búsqueda textual sobre todos los elementos que marquemos, si no lo marcamos, lo hará sobre toda la base de datos.
+Para buscar en todos los campos de una tabla, se puede colocar delante de una tubería.
 
 ```
 Perf
@@ -58,7 +80,7 @@ Perf
 Perf
 | search "Free*Bytes"
 ```
-Cuando se utilizan los operadores lógicos, estos se aplican al ambito de la consulta, no a un único campo.  
+Cuando se utilizan los operadores lógicos, estos se aplican al ámbito de la consulta, no a un único campo.  
 En el ejemplo, no tienen que coincidir ambos operadores en el mismo campo si no en la misma fila. 
 ```
 Perf
@@ -130,7 +152,7 @@ Perf
 ### Take o Limit
 Se usa para que nos devuelva un número concreto de resultados aleatorios.  
 Cada vez que se ejecuta la consulta los resultados pueden ser diferentes.  
-Muy práctico para saber si una consulta devolvera resultados correctos sin tener que esperar por el resultado completo.  
+Muy práctico para saber si una consulta devolverá resultados correctos sin tener que esperar por el resultado completo.  
 ```
 Perf
 | take 10
@@ -139,7 +161,7 @@ Perf
 | limit 10
 ```
 ### Count
-Este operador devulve el número de filas que coinciden con los criterios marcados.
+Este operador devuelve el número de filas que coinciden con los criterios marcados.
 ```
 Perf
 | count
@@ -150,6 +172,8 @@ Perf
     and CounterValue > 0
 | count
 ```
+Está la opción `countif()` en al que únicamente contará si cumplimos con la condición.
+
 ### Summarize
 Sirve para agrupar resultados. Se pueden marcar varios para conjuntos.  
 ```
@@ -172,10 +196,10 @@ Perf
 Perf
 | where CounterName == "% Free Space"
 | summarize NumberOfRowsAtThisPercentLevel=count() 
-         by bin(CounterValue,10) // Intervalos númericos en grupos de 10
+         by bin(CounterValue,10) // Intervalos numéricos en grupos de 10
 ```
 ### Extend
-Permite crear columnas en el resultado. Sirve para crear columnas con campos calculados por ejemplo.
+Permite crear columnas en el resultado. Sirve para crear columnas con campos calculados, por ejemplo.
 ```
 Perf 
 | where CounterName == "Free Megabytes"
@@ -184,6 +208,7 @@ Perf
        , FreeKB = CounterValue * 1000
 ```
 La función strcat() permite concatenar strings.
+
 ```
 Perf
 | extend ObjectCounter = strcat(ObjectName, " - ", CounterName) 
@@ -264,7 +289,7 @@ Operador para expresar un momento en el tiempo utilizando de referencia el momen
 ```
 print ago(1h)
 ```
-Para expresar momentos futuros, unicamente hay que poner la cantidad de tiempo en negativo.
+Para expresar momentos futuros, únicamente hay que poner la cantidad de tiempo en negativo.
 ```
 print ago(-365d)
 ```
@@ -284,17 +309,17 @@ Perf
 | sort by Computer asc, TimeGenerated // Primero ordena por Computer
 ```
 ### Extract
-Permite extraer una subcadena de una celda utilizando un expreción regular.
+Permite extraer una sub-cadena de una celda utilizando un expresión regular.
 ```
 Perf
 | where ObjectName == "LogicalDisk"
     and InstanceName matches regex "[A-Z]:"
 | project Computer 
         , CounterName 
-        , extract("[A-Z]:", 0, InstanceName) // El segundo parametro es el grupo en caso de existir, 0 es para devolver todos.
+        , extract("[A-Z]:", 0, InstanceName) // El segundo parámetro es el grupo en caso de existir, 0 es para devolver todos.
 ```
 ### Parse
-Sirve para dividir el contenido de un campo en otros utilizando los identificadores opertunos.
+Sirve para dividir el contenido de un campo en otros utilizando los identificadores oportunos.
  ```
 //Event code: 3005  Event message: An unhandled exception has occurred.  Event time: 4/1/2018 11:44:43 PM  Event time (UTC): 4/1/2018 11:44:43 PM  Event ID: b8eea7d21d044fa8a0a774392f1f5b24  Event sequence: 5892  Event occurrence: 217  Event detail code: 0    Application information:      Application domain: /LM/W3SVC/2/ROOT-2-131670348328019759      Trust level: Full      Application Virtual Path: /      Application Path: C:\inetpub\ContosoRetail\      Machine name: CONTOSOWEB1    Process information:      Process ID: 13200      Process name: w3wp.exe      Account name: IIS APPPOOL\ContosoRetail    Exception information:      Exception type: FormatException        
 // ... more data followed
@@ -322,7 +347,7 @@ Perf
 | where CounterValue > 0
 | take 100                       // done just to give us a small dataset to demo
 | extend HowLongAgo=( now() - TimeGenerated )
-       , TimeSinceStartOfYear=(TimeGenerated - datetime(2018-01-01)) // Timpos en dias.horas:minutos... desde una fecha
+       , TimeSinceStartOfYear=(TimeGenerated - datetime(2018-01-01)) // Tiempos en dias.horas:minutos... desde una fecha
 | project Computer 
         , CounterName
         , CounterValue  
@@ -330,7 +355,7 @@ Perf
         , HowLongAgo 
         , TimeSinceStartOfYear 
 ```
-Para tener un resultado en una udidad de tiempo concreta, hay que dividir el resultado entre la unidad deseada.
+Para tener un resultado en una unidad de tiempo concreta, hay que dividir el resultado entre la unidad deseada.
 ```
 TimeSinceStartOfYear=( TimeGenerated - datetime(2018-01-01) ) / 1d  // Expresado en dias
 ```
@@ -360,7 +385,7 @@ Perf
 // yyyy - Year, 0000 to 9999
 ```
 ### startofday y endofday //week, month, year
-Esta función sirve para calcular el inicio o el fin del dia/semana... de una fecha dada.  
+Esta función sirve para calcular el inicio o el fin del día/semana... de una fecha dada.  
 ```
 Event
 | where TimeGenerated >= ago(7d)
@@ -409,7 +434,7 @@ Perf
         , microsecond = datetime_part("microsecond", TimeGenerated)
         , nanosecond = datetime_part("nanosecond", TimeGenerated)
 
-Event // Eventos agrupados por horas del dia
+Event // Eventos agrupados por horas del día
 | where TimeGenerated >= ago(7d)
 | extend HourOfDay = datetime_part("hour", TimeGenerated)
 | project HourOfDay 
@@ -443,6 +468,7 @@ Para realizar esta operación con json de varios niveles se debe usar la notaci�
 
 ### Iif
 Operador lógico "si", sirve para crear campos dinámicos teniendo en cuenta una condición.
+
 ```
 Perf
 | where CounterName == "% Free Space"
@@ -468,8 +494,8 @@ Perf
 | summarize ComputerCount=count() 
          by FreeLevel
 ```
-### Isempty y Isnull
-La función isempty devolverá Verdadero si el campo asignado está vacio e Isnull si contine el valor Null.
+### Isempty e Isnull
+La función isempty devolverá Verdadero si el campo asignado está vacío e Isnull si contiene el valor Null.
 ```
 Perf
 | where isempty( InstanceName )
@@ -480,7 +506,7 @@ Perf
 | count
 ```
 ### Split
-Esta función divide un campo por el caracter/es asignados.
+Esta función divide un campo por el carácter/es asignados.
 ```
 Perf
 | take 100                       // done just to give us a small dataset to demo
@@ -490,7 +516,7 @@ Perf
         , CounterPath  // Ejemplo: "\\AppBE00.NA.contosohotels.com\LogicalDisk(D:)\% Free Space	"
         , CPSplit = split(CounterPath, "\\") // Salida: ["","","AppBE00.NA.contosohotels.com","LogicalDisk(D:)","% Free Space"]	
 ```
-Se puede añadir un tercer parámetro a la función que será el indice del elemento de salida que queremos obtener.
+Se puede añadir un tercer parámetro a la función que será el índice del elemento de salida que queremos obtener.
 ```
 Perf
 | take 100                       
@@ -504,7 +530,7 @@ Perf
         , myComputer 
         , myObjectInstance
 ```
-Es más recomendable asignar la salida del split a una variable y obtener de ahí el indice deseado, la salida será un String no un array.
+Es más recomendable asignar la salida del split a una variable y obtener de ahí el índice deseado, la salida será un String no un array.
 ```
 Perf
 | extend CounterPathArray = split(CounterPath, "\\") 
@@ -512,8 +538,125 @@ Perf
        , myObjectInstance = CounterPathArray[3]
 ```
 ### String Operators
-Operadores adiccionales a los explicados en el primer apartado:
+Operadores adicionales a los explicados en el primer apartado:
 * `where CouenterName contains "BYTES"` No es sensitivo
 * `where CouenterName contains_cs "BYTES"` Es sensitivo
 * `where CouenterName !contains "BYTES"` Niega el contiene
 * `where CounterName in ("Disk Transfers/sec", "Disk Reads/sec", "Avg. Disk sec/Write") ` Pertenece a un grupo
+
+## Agregaciones
+* `arg_max(CounterValue, *)` Para devolver el valor más alto de la respuesta.
+* `arg_min(CounterValue, *)` Para devolver el valor más bajo de la respuesta.
+
+### Maseket() y makelist()
+Crear listas de elementos con el resultado. En el ejemplo, crea una lista de los equipos con menos del 30% de capacidad de disco. 
+Makeset crea una lista de elementos únicos y makelist con todos los elementos.
+```
+  Perf
+| where CounterName == "% Free Space"
+    and CounterValue <= 30
+| summarize Computers = makeset(Computer)
+```
+
+### Mxexpand()
+Pasa los elementos de una lista a un resultado por columna, repitiendo el resto de los datos en la fila.
+```
+SecurityAlert
+| extend ExtProps=todynamic(ExtendedProperties)
+| mvexpand ExtProps
+| project TimeGenerated 
+        , DisplayName 
+        , AlertName 
+        , AlertSeverity 
+        , ExtProps
+```
+
+## Dcount()
+Dcount hace una cuenta de elementos únicos de manera aproximada.  
+A diferencia de `distinct`, dcount es muy rápido y puede servir para hacer una aproximación.  
+```
+SecurityEvent
+| where TimeGenerated >= ago(90d)
+| summarize dcount(EventID) by Computer
+| sort by Computer asc
+```
+Se le puede añadir un parámetro a dcount con el nivel de precisión.
+* 0 = Least accurate, 1.6% error
+* 1 = Default, balances accuracy and time, 0.8% error level
+* 2 = Accurate but slow, 0.4% error
+* 3 = Extra accurate but slowest, 0.28% error level
+
+Se puede utilizar la función `dcountif()`, para utilizarle es necesario pasarle un segundo parámetro.  
+En el segundo parámetro se añadirá una lista de valores. Al igual que a dcount, se le puede pasar como tercer parámetro la precisión.  
+
+```
+SecurityEvent
+| where TimeGenerated >= ago(90d)
+| summarize dcountif( EventID
+                    , EventID in (4625, 4688, 4624, 4672, 4670, 4689, 4634, 4674)
+                    ) 
+         by Computer
+| sort by Computer asc
+```
+## Pivot()
+Esta función permite crear columnas con los valores de los resultados.  
+```
+Event
+| project Computer, EventLevelName 
+| evaluate pivot(EventLevelName)
+| sort by Computer asc
+```
+
+## Datasets
+### Let
+Let se utiliza para la creación de variables, constantes o funciones.
+* Creación de constantes `let minCounterValue = 300;` 
+* También puede ser usado con datos calculados como `let startDate = ago(7d)`
+* Se pueden almacenar resultados de una consulta.
+```
+let Updt = Update
+| where Computer = "contosoeqp"
+| project ...
+```  
+* Para la creación de funciones.
+```
+let dateDiffInDays = (date1: datetime, date2: datetime)
+                     { (date1-date2) / 1d};
+print dateDiffInDays(now(), todatetime("2018-05-01"))
+```
+### Join
+Sirve para unir los datos de dos o más tablas.
+```
+Perf
+| take 10
+| join (Alert) on Computer
+```
+También se podría haber utilizado `| join (Alert) on $left.Computer == $right.Computer`, útil cuando no tienen el mismo nombre.
+La consulta antes del join, puede ser todo lo compleja que se necesite, al igual que en el interior del paréntesis posterior al join.
+Los tipos de join se mancan con `| join kind=tipo` y existen varios tipos de join:
+* innerunique, valor por defecto. Devuelve el primer resultado de la derecha que coincida con cada resultado de la derecha y descarta el resto.
+* inner, una fila por cada combinación de resultados. Igual que en SQL.
+* leftouter, un resultado por cada columna de la izquierda, incluso aunque no coincida con ningún resultado de la derecha.
+* rightouter / fullouter, todos los resultados de la derecha independientemente de no tener coincidencia.
+* leftanti / rightanti, sólo devuelve resultados que no tengan coincidencia en la otra tabla.
+* leftsemi / rightsemi, devuelve filas que coincidan en ambas, pero únicamente las columnas de una de ellas.
+
+### Union
+Sirve para unir dos tablas, no mezcla los elementos en una misma fila, crea filas diferentes para cada elemento.  
+En el caso de que una columna no exista en la otra tabla, en la tabla en la que no existe aparecerá sin datos.  
+```
+UpdateSummary
+| union Update
+
+UpdateSummary
+| union  withsource="SourceTable" Update //Mostrará una columna nueva llamada "SourceTable" con el nombre de la tabla de cada registro.  
+```
+Hay dos tipos de "Union",  "inner" solo devuelve las celdas en común.
+"outer" por defecto, devuelve todas las celdas quedando vacías las que no coincidan. 
+```
+UpdateSummary
+| union kind=outer Update
+
+```
+
+Mirar "External" si se puede hacer la consulta dinámicamente
